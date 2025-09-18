@@ -309,8 +309,8 @@ const CapturedPieces = ({ board, color }: { board: Board; color: Player; }) => {
     );
 };
 
-const EndGameModal = ({ status, onRematch, onMainMenu, gameMode, playerColor, onRematchRequest, rematchRequested } : {
-    status: string; onRematch: () => void; onMainMenu: () => void; gameMode: GameMode; playerColor: Player | null; onRematchRequest: () => void; rematchRequested?: boolean;
+const EndGameModal = ({ status, onRematch, onMainMenu, gameMode, onRematchRequest, rematchRequested } : {
+    status: string; onRematch: () => void; onMainMenu: () => void; gameMode: GameMode; onRematchRequest: () => void; rematchRequested?: boolean;
 }) => (
     <div className="modal-overlay">
         <div className="modal-content">
@@ -327,6 +327,17 @@ const EndGameModal = ({ status, onRematch, onMainMenu, gameMode, playerColor, on
     </div>
 );
 
+const GameMenuModal = ({ onResign, onQuit, onClose } : { onResign: ()=>void; onQuit: ()=>void; onClose: ()=>void; }) => (
+    <div className="modal-overlay" onClick={onClose}>
+        <div className="modal-content" onClick={e => e.stopPropagation()}>
+            <h2>Menu</h2>
+            <button onClick={onResign}>Resign</button>
+            <button onClick={onQuit}>Quit to Main Menu</button>
+            <button onClick={onClose}>Cancel</button>
+        </div>
+    </div>
+);
+
 const ChessGame = ({ gameMode, gameId, playerColor, onMainMenu }: {
     gameMode: GameMode; gameId?: string | null; playerColor: Player; onMainMenu: () => void;
 }) => {
@@ -335,31 +346,29 @@ const ChessGame = ({ gameMode, gameId, playerColor, onMainMenu }: {
     const [selectedPiece, setSelectedPiece] = useState<Position | null>(null);
     const [validMoves, setValidMoves] = useState<Position[]>([]);
     const [isAiThinking, setIsAiThinking] = useState(false);
+    const [isMenuOpen, setIsMenuOpen] = useState(false);
     
     const currentGameState = useMemo(() => gameMode === 'online' ? onlineGameState : gameState, [gameMode, gameState, onlineGameState]);
     const currentBoard = useMemo(() => currentGameState?.history[currentGameState.history.length-1], [currentGameState]);
 
-    // Online game state sync
     useEffect(() => {
         if (gameMode === 'online' && gameId) {
             const gameRef = ref(db, `games/${gameId}`);
             const listener = onValue(gameRef, (snapshot) => {
                 const data = snapshot.val();
                 if (data) setOnlineGameState(data);
-                else onMainMenu(); // Game was deleted or does not exist
+                else onMainMenu(); 
             });
             return () => off(gameRef, 'value', listener);
         }
     }, [gameMode, gameId, onMainMenu]);
 
-    const updateOnlineGame = (newState: GameState) => {
+    const updateOnlineGame = (newState: GameState | OnlineGameState) => {
         if (gameMode === 'online' && gameId) {
             const gameRef = ref(db, `games/${gameId}`);
-            set(gameRef, {
-                ...newState,
-                players: onlineGameState?.players || {},
-                rematch: onlineGameState?.rematch || {},
-            });
+            const players = onlineGameState?.players || {};
+            const rematch = onlineGameState?.rematch || {};
+            set(gameRef, { ...newState, players, rematch });
         }
     };
     
@@ -373,12 +382,12 @@ const ChessGame = ({ gameMode, gameId, playerColor, onMainMenu }: {
         } else {
             updateOnlineGame(newState);
         }
-    }, [currentGameState, gameMode]);
+    }, [currentGameState, gameMode, onlineGameState]);
     
     const handleSquareClick = (pos: Position) => {
         if (!currentGameState || !currentBoard) return;
         const piece = currentBoard[pos.row][pos.col];
-        const isGameOver = currentGameState.status.startsWith('Checkmate') || currentGameState.status.startsWith('Stalemate');
+        const isGameOver = currentGameState.status.includes('wins') || currentGameState.status.includes('draw');
         const isMyTurn = currentGameState.turn === playerColor;
 
         if (isGameOver || (gameMode === 'ai' && isAiThinking) || (gameMode === 'online' && !isMyTurn)) return;
@@ -439,7 +448,7 @@ const ChessGame = ({ gameMode, gameId, playerColor, onMainMenu }: {
     }, []);
 
     useEffect(() => {
-        if (gameMode === 'ai' && gameState.turn !== playerColor && !gameState.status.startsWith('Checkmate') && !gameState.status.startsWith('Stalemate')) {
+        if (gameMode === 'ai' && gameState.turn !== playerColor && !gameState.status.includes('wins') && !gameState.status.includes('draw')) {
             setIsAiThinking(true);
             const timer = setTimeout(() => {
                 const bestMove = getBestMove(gameState);
@@ -453,14 +462,9 @@ const ChessGame = ({ gameMode, gameId, playerColor, onMainMenu }: {
     const resetGame = () => {
         const initial = getInitialGameState();
         if (gameMode === 'ai') setGameState(initial);
-        else {
-             if (gameId) {
-                const gameRef = ref(db, `games/${gameId}`);
-                set(gameRef, {
-                    ...initial,
-                    players: onlineGameState?.players || {},
-                });
-            }
+        else if (gameId) {
+            const newOnlineState = { ...initial, players: onlineGameState?.players || {}, rematch: {} };
+            updateOnlineGame(newOnlineState);
         }
     };
 
@@ -468,6 +472,18 @@ const ChessGame = ({ gameMode, gameId, playerColor, onMainMenu }: {
         if (gameMode !== 'online' || !gameId || !playerColor) return;
         const rematchRef = ref(db, `games/${gameId}/rematch/${playerColor}`);
         set(rematchRef, true);
+    };
+
+    const handleResign = () => {
+        if (!currentGameState) return;
+        const resignStatus = `${playerColor === 'w' ? 'White' : 'Black'} resigns. ${playerColor === 'w' ? 'Black' : 'White'} wins.`;
+        const newState = { ...currentGameState, status: resignStatus };
+        if (gameMode === 'ai') {
+            setGameState(newState);
+        } else {
+            updateOnlineGame(newState);
+        }
+        setIsMenuOpen(false);
     };
 
     useEffect(() => {
@@ -478,7 +494,7 @@ const ChessGame = ({ gameMode, gameId, playerColor, onMainMenu }: {
 
     if (!currentGameState || !currentBoard) return <div className="screen-container"><h1>Loading Game...</h1></div>;
 
-    const isGameOver = currentGameState.status.startsWith('Checkmate') || currentGameState.status.startsWith('Stalemate');
+    const isGameOver = currentGameState.status.includes('wins') || currentGameState.status.includes('draw');
     const opponentColor = playerColor === 'w' ? 'b' : 'w';
 
     return (
@@ -489,11 +505,11 @@ const ChessGame = ({ gameMode, gameId, playerColor, onMainMenu }: {
                     onRematch={resetGame}
                     onMainMenu={onMainMenu}
                     gameMode={gameMode}
-                    playerColor={playerColor}
                     onRematchRequest={handleRematchRequest}
                     rematchRequested={onlineGameState?.rematch?.[playerColor]}
                 />
             )}
+            {isMenuOpen && <GameMenuModal onResign={handleResign} onQuit={onMainMenu} onClose={() => setIsMenuOpen(false)} />}
             <div className="player-info-panel top">
                 <span className="player-name">Opponent</span>
                 <CapturedPieces board={currentBoard} color={playerColor} />
@@ -509,8 +525,9 @@ const ChessGame = ({ gameMode, gameId, playerColor, onMainMenu }: {
              <div className="player-info-panel bottom">
                 <span className="player-name">You ({playerColor === 'w' ? 'White' : 'Black'})</span>
                 <CapturedPieces board={currentBoard} color={opponentColor} />
-                 <div className="status">{currentGameState.status}</div>
+                 <div className="status">{isAiThinking ? 'AI is thinking...' : currentGameState.status}</div>
             </div>
+            <button className="menu-button in-game-menu-button" onClick={() => setIsMenuOpen(true)}>Menu</button>
         </div>
     );
 };
@@ -523,9 +540,33 @@ const HomeScreen = ({ onPlayOnline, onPlayAI }: { onPlayOnline: () => void; onPl
     </div>
 );
 
-const LobbyScreen = ({ onGameJoined }: { onGameJoined: (gameId: string, color: Player) => void }) => {
+const LobbyScreen = ({ onGameJoined, onBack }: { onGameJoined: (gameId: string, color: Player) => void; onBack: () => void; }) => {
     const [joinId, setJoinId] = useState('');
     const [createdGameId, setCreatedGameId] = useState<string | null>(null);
+    const [isWaiting, setIsWaiting] = useState(false);
+    const [error, setError] = useState('');
+
+    useEffect(() => {
+        if (!createdGameId || !isWaiting) return;
+
+        const gameRef = ref(db, `games/${createdGameId}`);
+        const listener = onValue(gameRef, (snapshot) => {
+            const gameData = snapshot.val();
+            if (gameData && gameData.players.b) {
+                setIsWaiting(false);
+                onGameJoined(createdGameId, 'w');
+            }
+        });
+
+        return () => off(gameRef, 'value', listener);
+    }, [createdGameId, isWaiting, onGameJoined]);
+
+    const handleBack = () => {
+        if(createdGameId) {
+            remove(ref(db, `games/${createdGameId}`));
+        }
+        onBack();
+    }
 
     const createGame = async () => {
         const newGameId = Math.random().toString(36).substring(2, 7).toUpperCase();
@@ -533,7 +574,7 @@ const LobbyScreen = ({ onGameJoined }: { onGameJoined: (gameId: string, color: P
         const initialGame: OnlineGameState = { ...getInitialGameState(), players: { w: 'player1' } };
         await set(newGameRef, initialGame);
         setCreatedGameId(newGameId);
-        onGameJoined(newGameId, 'w');
+        setIsWaiting(true);
     };
 
     const joinGame = async () => {
@@ -546,12 +587,12 @@ const LobbyScreen = ({ onGameJoined }: { onGameJoined: (gameId: string, color: P
                 set(playerRef, 'player2');
                 onGameJoined(joinId.toUpperCase(), 'b');
             } else {
-                alert("Game not found or is full.");
+                setError("Game not found or is full.");
             }
         }, { onlyOnce: true });
     };
 
-    if (createdGameId) {
+    if (isWaiting && createdGameId) {
         return (
              <div className="screen-container">
                 <h1>Game Created</h1>
@@ -561,6 +602,7 @@ const LobbyScreen = ({ onGameJoined }: { onGameJoined: (gameId: string, color: P
                     <button className="copy-button" onClick={() => navigator.clipboard.writeText(createdGameId)}>Copy</button>
                 </div>
                 <p className="waiting-text">Waiting for opponent to join...</p>
+                <button className="menu-button back-button" onClick={handleBack}>Back</button>
             </div>
         )
     }
@@ -568,17 +610,22 @@ const LobbyScreen = ({ onGameJoined }: { onGameJoined: (gameId: string, color: P
     return (
         <div className="screen-container">
             <h1>Play Online</h1>
+            {error && <p className="lobby-error">{error}</p>}
             <button className="menu-button" onClick={createGame}>Create Game</button>
-            <p>OR</p>
+            <p className="or-divider">OR</p>
             <input 
                 type="text" 
                 className="lobby-input" 
                 placeholder="ENTER GAME ID" 
                 value={joinId}
-                onChange={(e) => setJoinId(e.target.value)}
+                onChange={(e) => {
+                    setJoinId(e.target.value.toUpperCase());
+                    setError('');
+                }}
                 maxLength={5}
             />
             <button className="menu-button" onClick={joinGame}>Join Game</button>
+            <button className="menu-button back-button" onClick={onBack}>Back</button>
         </div>
     );
 };
@@ -594,6 +641,7 @@ const App = () => {
     const handlePlayAI = () => {
         setGameMode('ai');
         setPlayerColor('w');
+        setGameId(null);
         setView('game');
     };
 
@@ -606,15 +654,19 @@ const App = () => {
 
     const handleMainMenu = () => {
         if (gameMode === 'online' && gameId && playerColor === 'w') {
-             // If creator leaves, delete the game
-            remove(ref(db, `games/${gameId}`));
+            const gameRef = ref(db, `games/${gameId}`);
+            onValue(gameRef, (snapshot) => {
+                if(snapshot.exists()) {
+                     remove(gameRef);
+                }
+            }, { onlyOnce: true });
         }
         setGameId(null);
         setView('home');
     };
 
     if (view === 'home') return <HomeScreen onPlayOnline={handlePlayOnline} onPlayAI={handlePlayAI} />;
-    if (view === 'lobby') return <LobbyScreen onGameJoined={handleGameJoined} />;
+    if (view === 'lobby') return <LobbyScreen onGameJoined={handleGameJoined} onBack={() => setView('home')} />;
     if (view === 'game') return <ChessGame gameMode={gameMode} gameId={gameId} playerColor={playerColor} onMainMenu={handleMainMenu}/>;
     
     return null;

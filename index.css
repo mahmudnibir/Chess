@@ -5,9 +5,10 @@ body {
     align-items: center;
     height: 100vh;
     margin: 0;
-    background-color: #1e1e1e;
-    color: #fff;
+    background-color: #1a1a1a;
+    color: #f0f0f0;
     touch-action: manipulation;
+    overflow: hidden;
 }
 
 #root {
@@ -30,53 +31,80 @@ body {
     max-width: 400px;
     padding: 20px;
     box-sizing: border-box;
-    gap: 20px;
+    gap: 16px;
 }
 
 h1 {
-    font-size: 2.5rem;
-    margin: 0 0 20px 0;
-    color: #e3e3e3;
-    text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+    font-size: 3rem;
+    font-weight: 300;
+    letter-spacing: 2px;
+    margin: 0 0 24px 0;
+    color: #e0e0e0;
+    text-shadow: 0 2px 5px rgba(0,0,0,0.7);
 }
 
 .menu-button, button {
     width: 100%;
     padding: 15px 20px;
-    font-size: 1.2rem;
-    font-weight: bold;
-    color: #fff;
-    background-color: #444;
-    border: none;
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #e0e0e0;
+    background-color: #333;
+    border: 1px solid #444;
     border-radius: 8px;
     cursor: pointer;
     transition: background-color 0.2s ease, transform 0.1s ease;
     text-align: center;
-    box-shadow: 0 3px 5px rgba(0,0,0,0.3);
-    border-bottom: 2px solid rgba(0,0,0,0.2);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.4);
 }
 
 .menu-button:hover, button:hover:not(:disabled) {
-    background-color: #555;
+    background-color: #3c3c3c;
 }
 
 .menu-button:active, button:active:not(:disabled) {
-    transform: translateY(1px);
-    box-shadow: 0 2px 3px rgba(0,0,0,0.3);
+    transform: translateY(2px);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.4);
 }
 
+button:disabled {
+    background-color: #2a2a2a;
+    color: #666;
+    cursor: not-allowed;
+    box-shadow: none;
+}
+
+.back-button {
+    background-color: #522;
+    border-color: #633;
+}
+
+.or-divider {
+    font-weight: bold;
+    color: #666;
+}
 
 .lobby-input {
     width: 100%;
     padding: 15px;
-    font-size: 1rem;
+    font-size: 1.2rem;
+    font-weight: bold;
     border-radius: 8px;
-    border: 1px solid #666;
-    background-color: #333;
+    border: 1px solid #555;
+    background-color: #2a2a2a;
     color: #fff;
     box-sizing: border-box;
     text-align: center;
     text-transform: uppercase;
+    letter-spacing: 2px;
+}
+.lobby-input::placeholder {
+    color: #777;
+}
+.lobby-error {
+    color: #ff8a8a;
+    font-weight: bold;
+    margin: -10px 0 0 0;
 }
 
 .copy-id-container {
@@ -88,20 +116,18 @@ h1 {
 .game-id-display {
     flex-grow: 1;
     padding: 15px;
-    font-size: 1rem;
+    font-size: 1.2rem;
     font-weight: bold;
-    background-color: #333;
-    border: 1px solid #666;
+    letter-spacing: 2px;
+    background-color: #2a2a2a;
+    border: 1px solid #555;
     border-radius: 8px;
     text-align: center;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
 }
 
 .copy-button {
     padding: 15px;
-    background-color: #58694a;
+    background-color: #4a5869;
     flex-shrink: 0;
 }
 
@@ -127,7 +153,7 @@ h1 {
 .player-info-panel {
     width: 100%;
     padding: 5px 10px;
-    background-color: #2b2b2b;
+    background-color: rgba(0,0,0,0.2);
     border-radius: 6px;
     display: flex;
     align-items: center;
@@ -148,13 +174,13 @@ h1 {
 }
 
 .captured-pieces .piece {
-    font-size: 1.2rem;
+    font-size: 1rem;
     text-shadow: none;
 }
 
 .status {
     width: 100%;
-    font-size: 1.1rem;
+    font-size: 1rem;
     font-weight: bold;
     text-align: left;
     padding-top: 5px;
@@ -166,8 +192,8 @@ h1 {
     grid-template-columns: repeat(8, 1fr);
     grid-template-rows: repeat(8, 1fr);
     width: 100%;
-    border: 4px solid #4a4a4a;
-    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.25);
+    border: 5px solid #30180a;
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.4), inset 0 0 15px rgba(0,0,0,0.5);
     aspect-ratio: 1 / 1;
 }
 
@@ -183,19 +209,21 @@ h1 {
     cursor: pointer;
 }
 
-.square.light { background-color: #EADDC5; }
-.square.dark { background-color: #7D946D; }
+.square.light { background-color: #D18B47; }
+.square.dark { background-color: #BA5536; }
 
 .piece.w {
-    color: #f8f8f8;
-    text-shadow: 0 1px 3px rgba(0,0,0,0.6);
+    color: #f0f0f0;
+    -webkit-text-stroke: 1px #333;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.7);
 }
 .piece.b {
-    color: #404040;
-    text-shadow: 0 1px 3px rgba(0,0,0,0.4);
+    color: #222;
+    -webkit-text-stroke: 1px #999;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.5);
 }
 
-.square.selected { background-color: #B4C65B !important; }
+.square.selected { background-color: #829f40 !important; }
 
 .valid-move::after {
     content: '';
@@ -205,7 +233,7 @@ h1 {
     transform: translate(-50%, -50%);
     width: 35%;
     height: 35%;
-    background-color: rgba(46, 139, 87, 0.6);
+    background-color: rgba(30, 80, 40, 0.7);
     border-radius: 50%;
 }
 
@@ -218,7 +246,6 @@ h1 {
     height: 100%;
     box-shadow: inset 0 0 0 4px rgba(200, 80, 80, 0.7);
     box-sizing: border-box;
-    border-radius: 2px;
 }
 
 .check::after {
@@ -228,10 +255,16 @@ h1 {
     left: 0;
     width: 100%;
     height: 100%;
-    background: radial-gradient(circle, rgba(255,50,50,0.5) 20%, transparent 70%);
+    background: radial-gradient(circle, rgba(255,50,50,0.6) 20%, transparent 70%);
 }
 
-/* End Game Modal */
+.in-game-menu-button {
+    width: 100%;
+    max-width: 200px;
+    margin-top: 5px;
+}
+
+/* Modals */
 @keyframes fadeIn {
     from { opacity: 0; }
     to { opacity: 1; }
@@ -243,29 +276,35 @@ h1 {
     left: 0;
     width: 100%;
     height: 100%;
-    background-color: rgba(0, 0, 0, 0.7);
+    background-color: rgba(0, 0, 0, 0.75);
     display: flex;
     justify-content: center;
     align-items: center;
     z-index: 1000;
-    animation: fadeIn 0.3s ease;
+    animation: fadeIn 0.2s ease-out;
 }
 
 .modal-content {
-    background-color: #2a2a2a;
-    border: 1px solid #444;
+    background-color: #252525;
+    border: 1px solid #555;
     padding: 30px;
     border-radius: 12px;
     text-align: center;
-    box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+    box-shadow: 0 5px 25px rgba(0,0,0,0.7);
     display: flex;
     flex-direction: column;
-    gap: 20px;
+    gap: 15px;
     width: 80%;
-    max-width: 300px;
+    max-width: 320px;
 }
 
 .modal-content h2 {
-    margin: 0;
+    margin: 0 0 10px 0;
     font-size: 1.8rem;
+    font-weight: 500;
+}
+.modal-content p {
+    margin: 0 0 10px 0;
+    font-size: 1.1rem;
+    color: #ccc;
 }
