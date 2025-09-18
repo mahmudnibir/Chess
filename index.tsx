@@ -7,7 +7,7 @@ import { getDatabase, ref, set, onValue, off, remove } from "firebase/database";
 const firebaseConfig = {
   apiKey: "AIzaSyD84dFgEycyoWDHABDXiv_Jx2r0bGaPJRc",
   authDomain: "roaster-423fc.firebaseapp.com",
-  databaseURL: "https://roaster-423fc-default-rtdb.firebaseio.com",
+  databaseURL: "https://roaster-423fc-default-rtdb.asia-southeast1.firebasedatabase.app",
   projectId: "roaster-423fc",
   storageBucket: "roaster-423fc.firebasestorage.app",
   messagingSenderId: "443678344200",
